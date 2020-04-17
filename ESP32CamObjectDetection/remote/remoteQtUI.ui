@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1305</width>
+    <height>913</height>
+   </rect>
+  </property>
+  <property name="focusPolicy">
+   <enum>Qt::StrongFocus</enum>
+  </property>
+  <property name="windowTitle">
+   <string>Terminator</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QPushButton" name="fwButton">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>700</y>
+      <width>51</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>FW</string>
+    </property>
+    <property name="shortcut">
+     <string>W</string>
+    </property>
+    <property name="autoRepeat">
+     <bool>false</bool>
+    </property>
+    <property name="autoRepeatInterval">
+     <number>10</number>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="bwButton">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>820</y>
+      <width>51</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>BW</string>
+    </property>
+    <property name="shortcut">
+     <string>S</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="leftButton">
+    <property name="geometry">
+     <rect>
+      <x>570</x>
+      <y>760</y>
+      <width>51</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>LEFT</string>
+    </property>
+    <property name="shortcut">
+     <string>A</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="rightButton">
+    <property name="geometry">
+     <rect>
+      <x>710</x>
+      <y>760</y>
+      <width>51</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>RIGHT</string>
+    </property>
+    <property name="shortcut">
+     <string>D</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="streamButton">
+    <property name="geometry">
+     <rect>
+      <x>630</x>
+      <y>750</y>
+      <width>71</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>STREAM</string>
+    </property>
+    <property name="shortcut">
+     <string>Q</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>1271</width>
+      <height>671</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;Image View&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>700</y>
+      <width>71</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:16pt;&quot;&gt;FPS: &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1305</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
