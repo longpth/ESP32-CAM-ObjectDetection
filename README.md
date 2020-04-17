@@ -1,7 +1,8 @@
 # ESP32-CAM: remoted object detection camera #
 
 ## Demonstration
-https://www.youtube.com/watch?v=4a_r6fCYZ3U
+
+[![ESP32-CAM: Remote Control Object Detection Camera](http://img.youtube.com/vi/4a_r6fCYZ3U/0.jpg)](https://www.youtube.com/watch?v=4a_r6fCYZ3U "ESP32-CAM: Remote Control Object Detection Camera")
 
 ## Descrition
 
@@ -29,4 +30,7 @@ Run remote control:<br/>
 ```bash
 python3 main.py
 ```
-Note: If your computer does not have GPU, update setting.ini by changing GPU = 0, or you can change like this to run the code in CPU
+Note: If your computer does not have GPU, update setting.ini by changing GPU = 0, or you can change like this to run the code in CPU.<br/>
+
+For use GPU, download the pretrained model [here](https://drive.google.com/file/d/13azCyG6wulYYfzFFTdpxxOx16kh6ysSg/view?usp=sharing) and place in the remote folder.
+
