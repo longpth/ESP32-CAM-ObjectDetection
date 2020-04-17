@@ -26,9 +26,11 @@ source <env_name>/bin/activate
 (<env_name>)$ pip install -r requirementVirtualenv.txt
 ```
 - windows 10: Not yet checked but it should be similar<br/>
+
 Run remote control:<br/>
 ```bash
-python3 main.py
+(<env_name>)$ cd remote
+(<env_name>)$ python3 main.py
 ```
 Note: If your computer does not have GPU, update setting.ini by changing GPU = 0, or you can change like this to run the code in CPU.<br/>
 
