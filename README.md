@@ -36,3 +36,10 @@ Note: If your computer does not have GPU, update setting.ini by changing GPU = 0
 
 For use GPU, download the pretrained model [here](https://drive.google.com/file/d/13azCyG6wulYYfzFFTdpxxOx16kh6ysSg/view?usp=sharing) and place in the remote folder.
 
+### CNN models reference sources
+SSD Mobilenetv2:
+https://github.com/tensorflow/models/tree/master/research/object_detection
+
+Keras-Yolov3
+https://github.com/qqwweee/keras-yolo3
+
