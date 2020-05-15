@@ -92,10 +92,10 @@ void setup(void) {
 
   UDPServer.begin(UDPPort); 
 
-  ledcSetup(4, 50, 16);//channel, freq, resolution
+  ledcSetup(4, 50, 12);//channel, freq, resolution
   ledcAttachPin(PIN_SERVO_YAW, 4);// pin, channel
 
-  ledcSetup(2, 50, 16);//channel, freq, resolution
+  ledcSetup(2, 50, 12);//channel, freq, resolution
   ledcAttachPin(PIN_SERVO_PITCH, 2);// pin, channel
 
 #ifdef SAVE_IMG
@@ -254,8 +254,8 @@ void stream(){
 }
 
 void servoWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 180) {
-  // calculate duty, 8191 from 2 ^ 13 - 1
-  uint32_t duty = (8191 / valueMax) * min(value, valueMax);
+  // calculate duty, 4095 from 2 ^ 12 - 1
+  uint32_t duty = (4095 / valueMax) * min(value, valueMax);
   ledcWrite(channel, duty);
 }
 
