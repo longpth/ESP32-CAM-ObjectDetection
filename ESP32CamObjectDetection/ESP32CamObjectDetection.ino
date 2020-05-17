@@ -48,6 +48,7 @@ int ledState = LOW;
 int posYaw = 90;
 int posPitch = 30;
 int delta = 1;
+const int angleMax = 180;
 
 void setup(void) {
   Serial.begin(115200);
@@ -253,8 +254,8 @@ void stream(){
   }
 }
 
-void servoWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 180) {
-  uint32_t duty = (8191 / valueMax) * min(value, valueMax);
+void servoWrite(uint8_t channel, uint8_t angle) {
+  uint32_t duty = (8191 / angleMax) * min(angle, angleMax);
   ledcWrite(channel, duty);
 }
 
