@@ -43,6 +43,7 @@ bool reqBw = false;
 const int PIN_SERVO_YAW   = 12;
 const int PIN_SERVO_PITCH = 2;
 const int LED_BUILTIN = 4;
+const int SERVO_RESOLUTION    = 16;
 int ledState = LOW;
 
 int posYaw = 90;
@@ -96,10 +97,10 @@ void setup(void) {
   // 1. 50hz ==> period = 20ms (sg90 servo require 20ms pulse, duty cycle is 1->2ms: -90=>90degree)
   // 2. resolution = 16, maximum value is 2^16-1=65535
   // From 1 and 2 => -90=>90 degree or 0=>180degree ~ 3276=>6553
-  ledcSetup(4, 50, 16);//channel, freq, resolution
+  ledcSetup(4, 50, SERVO_RESOLUTION);//channel, freq, resolution
   ledcAttachPin(PIN_SERVO_YAW, 4);// pin, channel
 
-  ledcSetup(2, 50, 16);//channel, freq, resolution
+  ledcSetup(2, 50, SERVO_RESOLUTION);//channel, freq, resolution
   ledcAttachPin(PIN_SERVO_PITCH, 2);// pin, channel
 
 #ifdef SAVE_IMG
@@ -287,7 +288,7 @@ void controlServos(){
     }
   }
   
-  servoWrite(2,posPitch,60);
+  servoWrite(2,posPitch);
   servoWrite(4,posYaw);
 }
 
