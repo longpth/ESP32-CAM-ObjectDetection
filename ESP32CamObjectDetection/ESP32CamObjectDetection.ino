@@ -93,6 +93,9 @@ void setup(void) {
 
   UDPServer.begin(UDPPort); 
 
+  // 1. 50hz ==> period = 20ms (sg90 servo require 20ms pulse, duty cycle is 1->2ms: -90=>90degree)
+  // 2. resolution = 16, maximum value is 2^16-1=65535
+  // From 1 and 2 => -90=>90 degree or 0=>180degree ~ 3276=>6553
   ledcSetup(4, 50, 16);//channel, freq, resolution
   ledcAttachPin(PIN_SERVO_YAW, 4);// pin, channel
 
@@ -255,7 +258,10 @@ void stream(){
 }
 
 void servoWrite(uint8_t channel, uint8_t angle) {
-  uint32_t duty = (8191 / angleMax) * min(angle, angleMax);
+  // regarding the datasheet of sg90 servo, pwm period is 20 ms and duty is 1->2ms
+  uint32_t maxDuty = (pow(2,SERVO_RESOLUTION)-1)/10; 
+  uint32_t minDuty = (pow(2,SERVO_RESOLUTION)-1)/20; 
+  uint32_t duty = (maxDuty-minDuty)*angle/180 + minDuty;
   ledcWrite(channel, duty);
 }
 
