@@ -4,7 +4,9 @@ click==7.1.1
 cycler==0.10.0
 Flask==1.1.2
 gast==0.2.2
+gevent==20.5.0
 google-pasta==0.2.0
+greenlet==0.4.15
 grpcio==1.28.1
 h5py==2.10.0
 itsdangerous==1.1.0
@@ -34,5 +36,7 @@ tensorboard==1.15.0
 tensorflow-estimator==1.15.1
 tensorflow-gpu==1.15.0
 termcolor==1.1.0
+websocket==0.2.1
+websocket-client==0.57.0
 Werkzeug==1.0.1
 wrapt==1.12.1
