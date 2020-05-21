@@ -14,6 +14,7 @@ Components are used: ESP32-CAM module, RC Servo x2, 5V Battery.<br/>
 ### Software setup
 The software contains 2 parts<br/>
 1. ESP32-CAM firmware<br/>
+- Dependency: Download https://github.com/Links2004/arduinoWebSockets as zip file and add this library to your Arduino Libraries by Sketch/Include Library/Add Zip...<br/>
 - Use Arduino IDE to flash firmware to ESP32-CAM module.<br/>
 2. Remote control software (Can be run on Ubuntu or Windows PC)<br/>
 - ubuntu: Install virtualenv<br/>
