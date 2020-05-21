@@ -1,10 +1,37 @@
+/*
+BSD 2-Clause License
+
+Copyright (c) 2020, longpth
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+#include <WebSocketsServer.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include <SPIFFS.h>
-#include <FS.h>
 #include "camera_wrap.h"
 
-// #define DEBUG
+#define DEBUG
 // #define SAVE_IMG
 
 const char* ssid = "your_ssid"; //replace with your wifi ssid
@@ -21,6 +48,9 @@ int portRemote;
 
 // Use WiFiClient class to create TCP connections
 WiFiClient tcpClient;
+bool clientConnected = false;
+
+WebSocketsServer webSocket = WebSocketsServer(86);
 
 const int RECVLENGTH = 8;
 byte packetBuffer[RECVLENGTH];
@@ -31,8 +61,6 @@ const unsigned long interval = 30;
 const unsigned long intervalServo = 100;
 
 bool bStream = false;
-const char strFinish[] = {'D','o','n','e'};
-
 int debugCnt=0;
 
 bool reqLeft = false;
@@ -50,11 +78,117 @@ int posYaw = 90;
 int posPitch = 30;
 int delta = 1;
 const int angleMax = 180;
+uint8_t camNo = 0;
+
+void processData(){
+  int cb = UDPServer.parsePacket();
+  if (cb) {
+    UDPServer.read(packetBuffer, RECVLENGTH);
+    addrRemote = UDPServer.remoteIP();
+    portRemote = UDPServer.remotePort();
+
+    String strPackage = String((const char*)packetBuffer);
+#ifdef DEBUG
+    Serial.print("receive: ");
+    // for (int y = 0; y < RECVLENGTH; y++){
+    //   Serial.print(packetBuffer[y]);
+    //   Serial.print("\n");
+    // }
+    Serial.print(strPackage);
+    Serial.print(" from: ");
+    Serial.println(addrRemote);
+#endif
+    if(strPackage.equals("whoami")){
+      UDPServer.beginPacket(addrRemote, portRemote);
+      String res = "ESP32-CAM";
+      UDPServer.write((const uint8_t*)res.c_str(),res.length());
+      UDPServer.endPacket();
+      Serial.println("response");
+    }else if(strPackage.equals("fwon")){
+      reqFw = true;
+    }else if(strPackage.equals("bwon")){
+      reqBw = true;
+    }else if(strPackage.equals("leon")){
+      reqLeft = true;
+    }else if(strPackage.equals("rion")){
+      reqRight = true;
+    }else if(strPackage.equals("fwoff")){
+      reqFw = false;
+    }else if(strPackage.equals("bwoff")){
+      reqBw = false;
+    }else if(strPackage.equals("leoff")){
+      reqLeft = false;
+    }else if(strPackage.equals("rioff")){
+      reqRight = false;
+    }
+  }
+  memset(packetBuffer, 0, RECVLENGTH);
+}
+
+void servoWrite(uint8_t channel, uint8_t angle) {
+  // regarding the datasheet of sg90 servo, pwm period is 20 ms and duty is 1->2ms
+  uint32_t maxDuty = (pow(2,SERVO_RESOLUTION)-1)/10; 
+  uint32_t minDuty = (pow(2,SERVO_RESOLUTION)-1)/20; 
+  uint32_t duty = (maxDuty-minDuty)*angle/180 + minDuty;
+  ledcWrite(channel, duty);
+}
+
+void controlServos(){
+  if(reqFw){
+    if(posPitch<60){
+      posPitch += 1;
+    }
+  }
+  if(reqBw){
+    if(posPitch>0){
+      posPitch -= 1;
+    }
+  }
+  if(reqLeft){
+    if(posYaw<180){
+      posYaw += 1;
+    }
+  }
+  if(reqRight){
+    if(posYaw>0){
+      posYaw -= 1;
+    }
+  }
+  
+  servoWrite(2,posPitch);
+  servoWrite(4,posYaw);
+}
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+  switch(type) {
+      case WStype_DISCONNECTED:
+          Serial.printf("[%u] Disconnected!\n", num);
+          camNo = num;
+          clientConnected = false;
+          break;
+      case WStype_CONNECTED:
+          Serial.printf("[%u] Connected!\n", num);
+          clientConnected = true;
+          break;
+      case WStype_TEXT:
+      case WStype_BIN:
+      case WStype_ERROR:
+      case WStype_FRAGMENT_TEXT_START:
+      case WStype_FRAGMENT_BIN_START:
+      case WStype_FRAGMENT:
+      case WStype_FRAGMENT_FIN:
+          Serial.println(type);
+          break;
+  }
+}
 
 void setup(void) {
   Serial.begin(115200);
   Serial.print("\n");
+  #ifdef DEBUG
   Serial.setDebugOutput(true);
+  #endif
 
   cameraInitState = initCamera();
 
@@ -93,6 +227,8 @@ void setup(void) {
   Serial.println(WiFi.localIP());
 
   UDPServer.begin(UDPPort); 
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
 
   // 1. 50hz ==> period = 20ms (sg90 servo require 20ms pulse, duty cycle is 1->2ms: -90=>90degree)
   // 2. resolution = 16, maximum value is 2^16-1=65535
@@ -102,237 +238,23 @@ void setup(void) {
 
   ledcSetup(2, 50, SERVO_RESOLUTION);//channel, freq, resolution
   ledcAttachPin(PIN_SERVO_PITCH, 2);// pin, channel
-
-#ifdef SAVE_IMG
-  if (!SPIFFS.begin(true)) {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    ESP.restart();
-  }
-  else {
-    delay(500);
-    Serial.println("SPIFFS mounted successfully");
-  }
-#endif
-
 }
 
 void loop(void) {
-
+  webSocket.loop();
+  if(clientConnected == true){
+    grabImage(jpgLength, jpgBuff);
+    webSocket.sendBIN(camNo, jpgBuff, jpgLength);
+    // Serial.print("send img: ");
+    // Serial.println(jpgLength);
+  }
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     processData();
-    stream();
   }
   if (currentMillis - previousMillisServo >= intervalServo) {
     previousMillisServo = currentMillis;
     controlServos();
   }
 }
-
-void processData(){
-  int cb = UDPServer.parsePacket();
-  if (cb) {
-    UDPServer.read(packetBuffer, RECVLENGTH);
-    addrRemote = UDPServer.remoteIP();
-    portRemote = UDPServer.remotePort();
-
-#ifdef DEBUG
-    Serial.print("receive: ");
-    String strPackage = String((const char*)packetBuffer);
-    // for (int y = 0; y < RECVLENGTH; y++){
-    //   Serial.print(packetBuffer[y]);
-    //   Serial.print("\n");
-    // }
-    Serial.print(strPackage);
-    Serial.print(" from: ");
-    Serial.println(addrRemote);
-#endif
-    if(  packetBuffer[0]=='s' 
-      && packetBuffer[1]=='t' 
-      && packetBuffer[2]=='r' 
-      && packetBuffer[3]=='e'
-      && packetBuffer[4]=='a'
-      && packetBuffer[5]=='m'){
-        bStream = true;
-        if(!tcpClient.connected()){
-          if (!tcpClient.connect(addrRemote, 6868)) {
-            Serial.println("connection failed");
-          }
-        }
-    }else if(  packetBuffer[0]=='s' 
-              && packetBuffer[1]=='t' 
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='p'){
-        bStream = false;
-        tcpClient.stop();
-    }else if(  packetBuffer[0]=='f' 
-              && packetBuffer[1]=='w' 
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='n'
-            ){
-        reqFw = true;
-    }else if(  packetBuffer[0]=='b' 
-              && packetBuffer[1]=='w'
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='n'
-              ){
-        reqBw = true;
-    }else if(  packetBuffer[0]=='l' 
-              && packetBuffer[1]=='e' 
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='n'){
-        reqLeft = true;
-    }else if(  packetBuffer[0]=='r' 
-              && packetBuffer[1]=='i' 
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='n'){
-        reqRight = true;
-    }else if(  packetBuffer[0]=='f' 
-              && packetBuffer[1]=='w' 
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='f'
-              && packetBuffer[4]=='f'
-            ){
-        reqFw = false;
-    }else if(  packetBuffer[0]=='b' 
-              && packetBuffer[1]=='w'
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='f'
-              && packetBuffer[4]=='f'
-              ){
-        reqBw = false;
-    }else if(  packetBuffer[0]=='l' 
-              && packetBuffer[1]=='e' 
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='f'
-              && packetBuffer[4]=='f'){
-        reqLeft = false;
-    }else if(  packetBuffer[0]=='r' 
-              && packetBuffer[1]=='i' 
-              && packetBuffer[2]=='o' 
-              && packetBuffer[3]=='f'
-              && packetBuffer[4]=='f'){
-        reqRight = false;
-    }
-  }
-  memset(packetBuffer, 0, RECVLENGTH);
-}
-
-void stream(){
-  // Serial.print("bStream: ");
-  // Serial.println(bStream);
-  if(bStream){
-    if (grabImage(jpgLength, jpgBuff) == ESP_OK){
-
-#ifdef SAVE_IMG
-      if(debugCnt>=20){
-        debugCnt=0;
-      }
-      String FILE_PHOTO = "/photo_" + String(debugCnt++) + ".jpg";
-      File file = SPIFFS.open(FILE_PHOTO.c_str(), FILE_WRITE);
-
-      // Insert the data in the photo file
-      if (!file) {
-        Serial.println("Failed to open file in writing mode");
-      }
-      else {
-        file.write(jpgBuff, jpgLength); // payload (image), payload length
-        Serial.print("The picture has been saved in ");
-        Serial.print(FILE_PHOTO);
-        Serial.print(" - Size: ");
-        Serial.print(file.size());
-        Serial.println(" bytes");
-      }
-      // Close the file
-      file.close();
-#endif
-
-#ifdef DEBUG
-      Serial.printf("Image length %d\n", jpgLength);
-#endif
-      sendImageTcp();
-      sendLenghtTcp();
-    }
-    delay(50);
-  }
-}
-
-void servoWrite(uint8_t channel, uint8_t angle) {
-  // regarding the datasheet of sg90 servo, pwm period is 20 ms and duty is 1->2ms
-  uint32_t maxDuty = (pow(2,SERVO_RESOLUTION)-1)/10; 
-  uint32_t minDuty = (pow(2,SERVO_RESOLUTION)-1)/20; 
-  uint32_t duty = (maxDuty-minDuty)*angle/180 + minDuty;
-  ledcWrite(channel, duty);
-}
-
-void controlServos(){
-  if(reqFw){
-    if(posPitch<60){
-      posPitch += 1;
-    }
-  }
-  if(reqBw){
-    if(posPitch>0){
-      posPitch -= 1;
-    }
-  }
-  if(reqLeft){
-    if(posYaw<180){
-      posYaw += 1;
-    }
-  }
-  if(reqRight){
-    if(posYaw>0){
-      posYaw -= 1;
-    }
-  }
-  
-  servoWrite(2,posPitch);
-  servoWrite(4,posYaw);
-}
-
-
-void sendImageTcp(){
-  tcpClient.write(jpgBuff, jpgLength);
-}
-
-void sendLenghtTcp(){
-  String strlength = String(jpgLength);
-  int len = strlength.length();
-  while(len++ < 6){
-    strlength = String("0") + strlength;
-  }
-  strlength = String("len:") + strlength;
-  tcpClient.write((const uint8_t* )strlength.c_str(), strlength.length());
-}
-
-void sendImageUdp(){
-  uint8_t* ptr = jpgBuff;
-  int jpgLengthTmp = jpgLength;
-  while(jpgLengthTmp>1024){
-    UDPServer.beginPacket(addrRemote, portRemote);
-    UDPServer.write(ptr, 1024);
-    UDPServer.endPacket();
-    jpgLengthTmp-=1024;
-    ptr+=1024;
-  }
-  if(jpgLengthTmp>0){
-    UDPServer.beginPacket(addrRemote, portRemote);
-    UDPServer.write(ptr, jpgLengthTmp);
-    UDPServer.endPacket();
-  }
-}
-
-void sendLengthUdp(){
-  String strlength = String(jpgLength);
-  int len = strlength.length();
-  while(len++ < 6){
-    strlength = String("0") + strlength;
-  }
-  strlength = String("length:")+strlength;
-  UDPServer.beginPacket(addrRemote, portRemote);
-  UDPServer.write((const uint8_t*)strlength.c_str(), strlength.length());
-  UDPServer.endPacket();
-}
-
